@@ -188,12 +188,12 @@ module.exports = async (req, res) => {
     const replyAddress = String(email || '').trim();
     // Prepare email options
     const emailOptions = {
-      from: 'APPLICATION FORM <noreply@attainmentofficeadserv.org>',
+      from: 'APPLICATION FORM <noreply@aoa-services.com>',
       reply_to: replyAddress,
       headers: replyAddress ? {
         'Reply-To': replyAddress,
       } : undefined,
-      to: ['support@attainmentofficeadserv.org'],
+      to: ['support@aoa-services.com'],
       subject: `New Job Application from ${sanitizedData.fullName}`,
       html: `
         <div style="margin:0;padding:24px;background:#eef2f7;font-family:'Segoe UI',Arial,sans-serif;color:#0f172a;">
