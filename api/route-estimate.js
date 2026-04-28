@@ -1,7 +1,6 @@
 const { computeRouteEstimate } = require('../lib/route-estimator');
 const {
   applySecurityHeaders,
-  rejectIfUntrustedOrigin,
   setCors,
 } = require('../lib/http-security');
 
@@ -35,10 +34,6 @@ function toRouteProviderLabel(provider) {
 module.exports = async (req, res) => {
   applySecurityHeaders(req, res);
   setCors(req, res, 'OPTIONS,POST');
-
-  if (rejectIfUntrustedOrigin(req, res)) {
-    return;
-  }
 
   if (req.method === 'OPTIONS') {
     res.status(204).end();

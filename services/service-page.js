@@ -802,7 +802,18 @@
                 form.reset();
                 toggleOtherLocation();
             } catch (error) {
-                setStatus(statusEl, error.message || 'Unable to submit your inquiry right now.', 'error');
+                const isCorsOrOriginError = /origin not allowed|cors|403/i.test(error.message);
+                const isNetworkError =
+                    /failed to fetch|networkerror|err_connection_refused/i.test(error.message) ||
+                    error.name === 'TypeError';
+
+                if (isCorsOrOriginError) {
+                    setStatus(statusEl, 'Submission blocked by a security rule. Please contact us directly at support@aoa-services.com.', 'error');
+                } else if (isNetworkError) {
+                    setStatus(statusEl, 'Could not reach the server. Please check your connection and try again.', 'error');
+                } else {
+                    setStatus(statusEl, error.message || 'Unable to submit your inquiry right now. Please contact us at support@aoa-services.com.', 'error');
+                }
             } finally {
                 if (submitButton) {
                     submitButton.disabled = false;

@@ -951,10 +951,14 @@
                 hideLeadForm();
                 toggleOtherLocationField();
             } catch (error) {
-                const isApiUnavailable = /404|405|failed to fetch|networkerror|err_connection_refused|cors|not found/i.test(error.message);
-                if (isApiUnavailable && !apiHintShown) {
+                const isCorsOrOriginError = /origin not allowed|cors|403/i.test(error.message);
+                const isApiUnavailable = isCorsOrOriginError || /404|405|failed to fetch|networkerror|err_connection_refused|not found/i.test(error.message);
+                if (isCorsOrOriginError && !apiHintShown) {
                     apiHintShown = true;
-                    addMessage('bot', 'I could not submit that right now. Please use the website inquiry form while we reconnect this channel.');
+                    addMessage('bot', 'Your submission was blocked by a security rule. Please use the contact form on the page or email us directly at support@aoa-services.com.');
+                } else if (isApiUnavailable && !apiHintShown) {
+                    apiHintShown = true;
+                    addMessage('bot', 'I could not submit that right now. Please use the website inquiry form or contact us at support@aoa-services.com.');
                 } else {
                     addMessage('bot', `I could not submit your inquiry right now: ${error.message}`);
                 }

@@ -15,7 +15,13 @@ const { adaptServerlessHandler } = require('./lib/serverless-adapter');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const isLocalDev = process.env.VERCEL !== '1' && !process.env.VERCEL_ENV;
+const isLocalDev = process.env.NODE_ENV !== 'production' &&
+  process.env.VERCEL !== '1' &&
+  !process.env.VERCEL_ENV;
+
+// Trust the loopback reverse proxy (OpenLiteSpeed / Nginx / Apache on the same server).
+// This makes Express respect X-Forwarded-Host, X-Forwarded-Proto, and X-Real-IP.
+app.set('trust proxy', 'loopback');
 
 app.disable('x-powered-by');
 

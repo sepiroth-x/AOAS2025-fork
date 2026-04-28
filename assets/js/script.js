@@ -1169,19 +1169,29 @@ document.addEventListener('DOMContentLoaded', function () {
                     error: error.message.slice(0, 140),
                 });
 
-                if (error.message.includes('Failed to fetch') ||
+                const isCorsOrOriginError = /origin not allowed|cors|403/i.test(error.message);
+                const isNetworkError =
+                    error.message.includes('Failed to fetch') ||
                     error.message.includes('NetworkError') ||
                     error.message.includes('ERR_CONNECTION_REFUSED') ||
-                    error.name === 'TypeError') {
+                    error.name === 'TypeError';
+
+                if (isCorsOrOriginError) {
                     customModal.show(
-                        'Server Not Running',
-                        'Please make sure the server is running.\n\n1. Install Node.js from https://nodejs.org/\n2. Close and reopen your terminal\n3. Run: npm install\n4. Run: npm run dev',
+                        'Submission Blocked',
+                        'Your request was blocked by a security rule. Please try again or contact us directly at support@aoa-services.com.',
+                        'error'
+                    );
+                } else if (isNetworkError) {
+                    customModal.show(
+                        'Connection Error',
+                        'Could not reach the server. Please check your connection and try again. If the issue persists, contact us at support@aoa-services.com.',
                         'error'
                     );
                 } else {
                     customModal.show(
-                        'Error',
-                        error.message || 'An error occurred while sending your inquiry. Please try again later.',
+                        'Submission Error',
+                        error.message || 'An error occurred while sending your inquiry. Please try again or contact us at support@aoa-services.com.',
                         'error'
                     );
                 }

@@ -1,7 +1,6 @@
 const { appendJsonLine, sanitizeText } = require('../lib/inquiry-utils');
 const {
   applySecurityHeaders,
-  rejectIfUntrustedOrigin,
   setCors,
 } = require('../lib/http-security');
 
@@ -36,10 +35,6 @@ function parseBody(body) {
 module.exports = async (req, res) => {
   applySecurityHeaders(req, res);
   setCors(req, res, 'GET,OPTIONS,POST');
-
-  if (rejectIfUntrustedOrigin(req, res)) {
-    return;
-  }
 
   if (req.method === 'OPTIONS') {
     res.status(204).end();

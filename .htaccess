@@ -1,0 +1,32 @@
+# OpenLiteSpeed / CyberPanel — Clean URLs + API proxy
+
+RewriteEngine On
+
+# ── Redirect .html → clean URL (301) ──────────────────────────────────
+# /careers.html → /careers
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.html[\s?] [NC]
+RewriteRule ^ /%1 [R=301,L]
+
+# ── Redirect /index → root ─────────────────────────────────────────────
+RewriteRule ^index$ / [R=301,L]
+
+# ── Proxy /api/* → Node.js on port 3000 ───────────────────────────────
+# Set env vars first so RequestHeader can reference them (OLS-compatible approach).
+RewriteCond %{HTTP_HOST} (.+)
+RewriteRule ^ - [E=PROXY_HOST:%1]
+RequestHeader set X-Forwarded-Host %{PROXY_HOST}e
+RequestHeader set X-Forwarded-Proto https
+RequestHeader set X-Real-IP %{REMOTE_ADDR}s
+RewriteRule ^api/(.*)$ http://127.0.0.1:3010/api/$1 [P,L]
+
+# ── Directory index: /services → services/index.html ──────────────────
+# Must come before the .html rule
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{DOCUMENT_ROOT}%{REQUEST_URI}/index.html -f
+RewriteRule ^(.+?)/?$ $1/index.html [L]
+
+# ── Clean URL: /careers → careers.html ───────────────────────────────
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.+?)/?$ $1.html [L]
