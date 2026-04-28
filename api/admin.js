@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 const {
   buildClientRequestEmailTemplate: buildAdminClientRequestEmailTemplate,
   buildClientStatusEmailTemplate,
@@ -42,8 +42,17 @@ const {
   createTokenForUser,
 } = require('../lib/admin-crm');
 
-const RESEND_API_KEY = (process.env.RESEND_API_KEY || '').trim();
-const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+function getMailTransport() {
+  const user = (process.env.GMAIL_USER || '').trim();
+  const pass = (process.env.GMAIL_APP_PASSWORD || '').trim();
+  if (!user || !pass) return null;
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: { user, pass },
+  });
+}
 
 function parseBody(body) {
   if (!body) {
@@ -620,24 +629,19 @@ async function handleClientRequests(req, res) {
       const requestRecord = await createClientRequest(payload, user);
       let notificationSent = false;
 
-      if (resend && RESEND_API_KEY) {
+      const transporter = getMailTransport();
+      if (transporter) {
         try {
           const template = buildAdminClientRequestEmailTemplate(requestRecord);
-          const { error } = await resend.emails.send({
-            from: 'AOAS CRM <support@attainmentofficeadserv.org>',
+          await transporter.sendMail({
+            from: `AOAS CRM <${process.env.GMAIL_USER}>`,
             to: [getSupportEmail()],
-            reply_to: requestRecord.clientEmail,
-            headers: {
-              'Reply-To': requestRecord.clientEmail,
-            },
+            replyTo: requestRecord.clientEmail,
             subject: template.subject,
             html: template.html,
             text: template.text,
           });
-
-          if (!error) {
-            notificationSent = true;
-          }
+          notificationSent = true;
         } catch (emailError) {
           console.error('Client request notification error:', emailError.message || emailError);
         }
@@ -697,28 +701,21 @@ async function handleClientRequestStatus(req, res, requestId) {
     let notificationSent = false;
     let notificationError = '';
 
-    if (resend && RESEND_API_KEY && result.request?.clientEmail) {
+    const transporter = getMailTransport();
+    if (transporter && result.request?.clientEmail) {
       try {
         const template = buildClientStatusEmailTemplate(result.request, {
           event: result.event,
         });
-        const { error } = await resend.emails.send({
-          from: 'AOAS CRM <support@attainmentofficeadserv.org>',
+        await transporter.sendMail({
+          from: `AOAS CRM <${process.env.GMAIL_USER}>`,
           to: [result.request.clientEmail],
-          reply_to: getSupportEmail(),
-          headers: {
-            'Reply-To': getSupportEmail(),
-          },
+          replyTo: getSupportEmail(),
           subject: template.subject,
           html: template.html,
           text: template.text,
         });
-
-        if (error) {
-          notificationError = error.message || 'Email send failed.';
-        } else {
-          notificationSent = true;
-        }
+        notificationSent = true;
       } catch (emailError) {
         notificationError = emailError.message || 'Email send failed.';
       }
@@ -772,29 +769,22 @@ async function handleClientRequestFinalize(req, res, requestId) {
     let notificationSent = false;
     let notificationError = '';
 
-    if (resend && RESEND_API_KEY && result.request?.clientEmail) {
+    const transporter = getMailTransport();
+    if (transporter && result.request?.clientEmail) {
       try {
         const template = buildClientStatusEmailTemplate(result.request, {
           event: result.event,
           hiredProfiles: result.hiredProfiles || [],
         });
-        const { error } = await resend.emails.send({
-          from: 'AOAS CRM <support@attainmentofficeadserv.org>',
+        await transporter.sendMail({
+          from: `AOAS CRM <${process.env.GMAIL_USER}>`,
           to: [result.request.clientEmail],
-          reply_to: getSupportEmail(),
-          headers: {
-            'Reply-To': getSupportEmail(),
-          },
+          replyTo: getSupportEmail(),
           subject: template.subject,
           html: template.html,
           text: template.text,
         });
-
-        if (error) {
-          notificationError = error.message || 'Email send failed.';
-        } else {
-          notificationSent = true;
-        }
+        notificationSent = true;
       } catch (emailError) {
         notificationError = emailError.message || 'Email send failed.';
       }

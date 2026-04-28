@@ -1,11 +1,17 @@
-const { Resend } = require('resend');
+const nodemailer = require('nodemailer');
 
 // Version 2.1 - Fixed 413 error, 3MB file limit, screening questions, skills, cover letter
-// Get and validate API key from environment variable
-const RESEND_API_KEY = process.env.RESEND_API_KEY?.trim();
-
-// Initialize Resend with API key (only if available)
-const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+function getMailTransport() {
+  const user = (process.env.GMAIL_USER || '').trim();
+  const pass = (process.env.GMAIL_APP_PASSWORD || '').trim();
+  if (!user || !pass) return null;
+  return nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port: 587,
+    secure: false,
+    auth: { user, pass },
+  });
+}
 
 // Sanitize inputs to prevent XSS
 const sanitizeHtml = (str) => {
@@ -160,11 +166,12 @@ module.exports = async (req, res) => {
       </tr>
     `).join('');
 
-    if (!resend || !RESEND_API_KEY) {
-      console.error('❌ Resend API key not configured');
+    const transporter = getMailTransport();
+    if (!transporter) {
+      console.error('❌ Gmail SMTP not configured');
       return res.status(500).json({
         success: false,
-        error: 'Email service not configured. Please set RESEND_API_KEY environment variable.'
+        error: 'Email service not configured. Please set GMAIL_USER and GMAIL_APP_PASSWORD environment variables.'
       });
     }
 
@@ -188,12 +195,9 @@ module.exports = async (req, res) => {
     const replyAddress = String(email || '').trim();
     // Prepare email options
     const emailOptions = {
-      from: 'APPLICATION FORM <noreply@aoa-services.com>',
-      reply_to: replyAddress,
-      headers: replyAddress ? {
-        'Reply-To': replyAddress,
-      } : undefined,
-      to: ['support@aoa-services.com'],
+      from: `APPLICATION FORM <${process.env.GMAIL_USER}>`,
+      replyTo: replyAddress || undefined,
+      to: [process.env.CAREERS_EMAIL || 'careers@aoa-services.com'],
       subject: `New Job Application from ${sanitizedData.fullName}`,
       html: `
         <div style="margin:0;padding:24px;background:#eef2f7;font-family:'Segoe UI',Arial,sans-serif;color:#0f172a;">
@@ -351,28 +355,13 @@ Received on ${nowPh} (PH Time)
       });
     }
 
-    // Send email using Resend
-    const { data, error } = await resend.emails.send(emailOptions);
-
-    if (error) {
-      console.error('❌ Resend API error:', JSON.stringify(error, null, 2));
-      console.error('Error details:', error.message || error);
-      return res.status(500).json({
-        success: false,
-        error: error.message || 'Failed to send email. Please check your Resend API key and try again.'
-      });
-    }
-
-    if (data && data.id) {
-      console.log(`✅ Career application email sent successfully! Email ID: ${data.id}`);
-    } else {
-      console.log('⚠️ Email sent but no ID returned from Resend');
-    }
+    // Send email using Gmail SMTP
+    const info = await transporter.sendMail(emailOptions);
+    console.log(`✅ Career application email sent successfully! Message ID: ${info.messageId}`);
 
     res.json({
       success: true,
       message: 'Thank you for your application! We will review your submission and get back to you soon.',
-      emailId: data?.id
     });
 
   } catch (error) {

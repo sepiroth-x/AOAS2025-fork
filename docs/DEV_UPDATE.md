@@ -96,33 +96,38 @@ NOTIFICATION_EMAIL=support@aoa-services.com
 
 ### HIGH PRIORITY
 
-- [ ] **Install nodemailer on server**
+- [x] **Install nodemailer on server**
   ```bash
   cd /home/aoa-services.com/public_html
   npm install nodemailer
   ```
 
-- [ ] **Get Gmail App Password from client**
+- [x] **Get Gmail App Password from client**
   - Needs Gmail address to use as sender
   - Needs 2FA enabled on that Google account
   - Then: Google Account → Security → App Passwords → generate 16-char password
 
-- [ ] **Update `lib/contact-handler.js`** — Replace Resend with nodemailer
+- [x] **Update `lib/contact-handler.js`** — Replace Resend with nodemailer
   - Remove `const { Resend } = require('resend')`
   - Add `const nodemailer = require('nodemailer')`
   - Replace `getResendClient()` with `getMailTransport()` using Gmail SMTP (`smtp.gmail.com:587` STARTTLS)
   - Replace both `resend.emails.send()` calls with `transporter.sendMail()`
   - Emails sent: ① internal notification to `NOTIFICATION_EMAIL` ② auto-reply to submitter
 
-- [ ] **Update `api/careers.js`** — Replace Resend with nodemailer
+- [x] **Update `api/careers.js`** — Replace Resend with nodemailer
   - Remove top-level `const { Resend } = require('resend')` and `const resend = new Resend(...)`
   - Add shared nodemailer transport
   - Replace `resend.emails.send(emailOptions)` with `transporter.sendMail()`
   - Preserve base64 attachment decoding — nodemailer supports `attachments: [{ filename, content }]` natively
+  - Career applications now route to `CAREERS_EMAIL` (`careers@aoa-services.com`) instead of support
+
+- [x] **Update `api/admin.js`** — Replace Resend with nodemailer
+  - Replaced all 3 `resend.emails.send()` calls: new client request notification, status update, and finalization emails
+  - Uses same `getMailTransport()` pattern with `GMAIL_USER` / `GMAIL_APP_PASSWORD`
 
 - [ ] **Add Gmail credentials to `.env` on server** and run:
   ```bash
-  pm2 restart aoas-web --update-env
+  git pull origin development && pm2 restart aoas-web --update-env
   pm2 logs aoas-web --lines 30
   ```
 
@@ -135,9 +140,9 @@ NOTIFICATION_EMAIL=support@aoa-services.com
 
 ### MEDIUM PRIORITY
 
-- [ ] **Careers form end-to-end test** — submit a test application with a PDF attachment, confirm email arrives at `support@aoa-services.com` with attachment intact
+- [ ] **Careers form end-to-end test** — submit a test application with a PDF attachment, confirm email arrives at `careers@aoa-services.com` with attachment intact
 
-- [ ] **Remove `RESEND_API_KEY` from `.env`** once Gmail is confirmed working (or replace with a placeholder comment)
+- [ ] **Remove `RESEND_API_KEY` from `.env` on server** once Gmail is confirmed working
 
 - [ ] **Admin credentials** — `ADMIN_PASSWORD` and `ADMIN_TOKEN_SECRET` are currently blank in `.env`. Need to be set before the CRM admin panel is used in production.
 
@@ -164,7 +169,10 @@ NODE_ENV=production
 # Email — Gmail SMTP (replaces Resend)
 GMAIL_USER=
 GMAIL_APP_PASSWORD=
+# Contact form notifications -> support inbox
 NOTIFICATION_EMAIL=support@aoa-services.com
+# Career application notifications -> careers inbox
+CAREERS_EMAIL=careers@aoa-services.com
 
 # Site
 SITE_URL=https://aoa-services.com
